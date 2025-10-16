@@ -14,7 +14,6 @@ with open(gif_path, "rb") as f:
     gif_bytes = f.read()
     gif_base64 = base64.b64encode(gif_bytes).decode()
 
-# --- HTML & JS ---
 components.html(
     f"""
     <style>
@@ -49,7 +48,7 @@ components.html(
     </style>
 
     <div id="video-container">
-        <video id="mainVideo" autoplay controls playsinline>
+        <video id="mainVideo" autoplay muted playsinline>
             <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
             Your browser does not support the video tag.
         </video>
@@ -64,11 +63,23 @@ components.html(
         const videoContainer = document.getElementById("video-container");
         const gifContainer = document.getElementById("gif-container");
 
-        // Ensure sound is enabled
-        video.muted = false;
-        video.volume = 1.0;
+        // Try to autoplay with sound after slight delay
+        window.addEventListener("load", () => {{
+            video.muted = false;
+            video.volume = 1.0;
+            const playPromise = video.play();
+            if (playPromise !== undefined) {{
+                playPromise.then(_ => {{
+                    console.log("Autoplay started with sound");
+                }}).catch(error => {{
+                    console.warn("Autoplay with sound blocked, retrying muted");
+                    video.muted = true;
+                    video.play();
+                }});
+            }}
+        }});
 
-        // When video ends: swap to GIF and trigger Streamlit balloons
+        // When video ends: show Diwali GIF and notify Streamlit
         video.addEventListener("ended", function() {{
             videoContainer.style.display = "none";
             gifContainer.style.display = "flex";
@@ -79,7 +90,7 @@ components.html(
     height=700,
 )
 
-# --- JS listener for Streamlit side ---
+# Listen for the signal and trigger balloons
 st.markdown(
     """
     <script>
@@ -95,6 +106,5 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- Trigger balloons when query param is set ---
 if st.query_params.get("show") == "balloons":
     st.balloons()
